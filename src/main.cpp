@@ -14,38 +14,6 @@ using namespace geode::prelude;
         }); \
     }
 
-/*static auto patch = Mod::get()->patch(reinterpret_cast<void*>(base::getCocos() + 0xA35CE), {0x31, 0xD2, 0x90});
-
-$on_mod(Loaded) {
-    if(patch.isOk()) {
-        (void) patch.unwrap()->disable();
-    }
-}
-
-void enablePatch() {
-    if(patch.isOk()) {
-        if(patch.unwrap()->enable()) {
-            log::info("Patch applied successfully");
-        } else {
-            log::error("Failed to apply patch, quick saving on reset may not work");
-        }
-    } else {
-        log::error("Failed to apply patch, quick saving on reset may not work");
-    }
-}
-
-void disablePatch() {
-    if(patch.isOk()) {
-        if(patch.unwrap()->disable()) {
-            log::info("Patch disabled successfully");
-        } else {
-            log::error("Failed to disable patch");
-        }
-    } else {
-        log::error("Failed to disable patch");
-    }
-}*/
-
 STATIC_BOOL_SETTING(saveLLM, save-llm);
 
 class $modify(FAPlayLayer, PlayLayer) {
