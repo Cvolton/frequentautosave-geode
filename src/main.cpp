@@ -137,7 +137,7 @@ class $modify(FAPlayLayer, PlayLayer) {
 
                     if(dict->stepIntoSubDictWithKey(dictKey)) {
                         dict->setObjectForKey(fmt::to_string(m_level->m_levelID.value()).c_str(), m_level);
-                        dict->stepBackToRootSubDict();
+                        dict->stepOutOfSubDict();
                     }
 
                     if(isGLM03) {
