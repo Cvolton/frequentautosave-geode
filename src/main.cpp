@@ -5,6 +5,15 @@
 
 using namespace geode::prelude;
 
+#define STATIC_BOOL_SETTING(name, jsonName) \
+    static bool s_##name = false; \
+    $on_mod(DataLoaded) { \
+        s_##name = Mod::get()->getSettingValue<bool>(#jsonName); \
+        listenForSettingChanges<bool>(#jsonName, +[](bool value) { \
+            s_##name = value; \
+        }); \
+    }
+
 /*static auto patch = Mod::get()->patch(reinterpret_cast<void*>(base::getCocos() + 0xA35CE), {0x31, 0xD2, 0x90});
 
 $on_mod(Loaded) {
@@ -37,9 +46,12 @@ void disablePatch() {
     }
 }*/
 
+STATIC_BOOL_SETTING(saveLLM, save-llm);
+
 class $modify(FAPlayLayer, PlayLayer) {
     struct Fields {
         std::shared_ptr<DS_Dictionary> m_dict = std::make_shared<DS_Dictionary>();
+        int m_lastPercentage = 0;
         std::atomic_bool m_isSaving = false;
         bool m_isLoaded = false;
         bool m_didFinalSave = false;
@@ -77,6 +89,30 @@ class $modify(FAPlayLayer, PlayLayer) {
         m_fields->m_didFinalSave = true;
         GameManager::get()->encodeDataTo(m_fields->m_dict.get());
         saveDictToFile();
+
+        if(m_level->m_levelType == GJLevelType::Editor) {
+            fullSaveLLM();
+        }
+    }
+
+    void fullSaveLLM() {
+        if(!s_saveLLM) return;
+
+        auto now = asp::Instant::now();
+        auto LLM = LocalLevelManager::get();
+        std::shared_ptr<DS_Dictionary> dict = std::make_shared<DS_Dictionary>();
+        LLM->encodeDataTo(dict.get());
+        async::spawn(arc::spawnBlocking<void>([dict, filename = LLM->m_fileName] {
+            #if defined(GEODE_IS_MACOS) || defined(GEODE_IS_IOS)
+                auto str = dict->saveRootSubDictToString();
+                PlatformToolbox::saveAndEncryptStringToFile(str, filename.c_str(), "/data/data/com.robtopx.geometryjump/");
+            #else
+                dict->saveRootSubDictToCompressedFile(filename.c_str());
+            #endif
+        }), [now] {
+            log::debug("LLM saving took {}", now.elapsed());
+        });
+
     }
 
     /**
@@ -93,6 +129,7 @@ class $modify(FAPlayLayer, PlayLayer) {
         PlayLayer::setupHasCompleted();
 
         m_fields->m_isLoaded = true;
+        m_fields->m_lastPercentage = m_level->m_newNormalPercent2;
     }
 
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
@@ -104,11 +141,9 @@ class $modify(FAPlayLayer, PlayLayer) {
     }
 
     void resetLevel() {
-        static int lastPercentage = 0;
-
         if(!m_fields->m_isLoaded) return PlayLayer::resetLevel();
 
-        if(m_level->m_newNormalPercent2 != lastPercentage) {
+        if(m_level->m_newNormalPercent2 != m_fields->m_lastPercentage) {
             auto start = asp::Instant::now();
             auto dict = m_fields->m_dict.get();
 
@@ -120,7 +155,7 @@ class $modify(FAPlayLayer, PlayLayer) {
 
             switch(m_level->m_levelType) {
                 case GJLevelType::Editor: {
-                    //TODO
+                    fullSaveLLM();
                     break;
                 }
                 case GJLevelType::Main: {
@@ -160,6 +195,7 @@ class $modify(FAPlayLayer, PlayLayer) {
             log::debug("Initializing save took {}", start.elapsed());
             saveDictToFile();
 
+            m_fields->m_lastPercentage = m_level->m_newNormalPercent2;
         }
 
         PlayLayer::resetLevel();

@@ -10,5 +10,13 @@
 	"name": "Frequent AutoSave",
 	"version": "v1.0.0",
 	"developer": "Cvolton",
-	"description": "It makes your game save more frequently"
+	"description": "It makes your game save more frequently",
+	"settings": {
+		"save-llm": {
+            "name": "Autosave Editor Levels",
+            "description": "Whether Editor levels should also be frequently autosaved. This can cause noticeable lag spikes for users with thousands of created levels. Normal vanilla game saving conditions are not affected by this option.",
+            "type": "bool",
+            "default": true
+        }
+	}
 }
