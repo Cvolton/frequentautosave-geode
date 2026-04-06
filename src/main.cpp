@@ -57,7 +57,12 @@ class $modify(FAPlayLayer, PlayLayer) {
         m_fields->m_isSaving = true;
 
         async::spawn(arc::spawnBlocking<void>([dict = m_fields->m_dict, filename] {
-            dict->saveRootSubDictToCompressedFile(filename.c_str());
+            #if defined(GEODE_IS_MACOS) || defined(GEODE_IS_IOS)
+                auto str = dict->saveRootSubDictToString();
+                PlatformToolbox::saveAndEncryptStringToFile(str, filename.c_str(), "/data/data/com.robtopx.geometryjump/");
+            #else
+                dict->saveRootSubDictToCompressedFile(filename.c_str());
+            #endif
         }), [selfPtr = WeakRef(this), now] {
             if(auto self = selfPtr.lock()) {
                 modify_cast<FAPlayLayer*>(self.data())->m_fields->m_isSaving = false;
