@@ -10,8 +10,5 @@
 	"name": "Frequent AutoSave",
 	"version": "v1.0.0",
 	"developer": "Cvolton",
-	"description": "It makes your game save more frequently",
-	"dependencies": {
-		"geode.node-ids": ">=v1.20.0"
-	}
+	"description": "It makes your game save more frequently"
 }
