@@ -21,6 +21,7 @@ class $modify(FAPlayLayer, PlayLayer) {
         std::shared_ptr<DS_Dictionary> m_dict = std::make_shared<DS_Dictionary>();
         int m_lastPercentage = 0;
         std::atomic_bool m_isSaving = false;
+        std::atomic_bool m_isSavingLLM = false;
         bool m_isLoaded = false;
         bool m_didFinalSave = false;
     };
@@ -54,6 +55,11 @@ class $modify(FAPlayLayer, PlayLayer) {
     void fullDictSave(float dt) {
         if(m_fields->m_didFinalSave) return;
 
+        if (m_fields->m_isSaving) {
+            this->scheduleOnce(schedule_selector(FAPlayLayer::fullDictSave), 0.5f);
+            return;
+        }
+
         m_fields->m_didFinalSave = true;
         GameManager::get()->encodeDataTo(m_fields->m_dict.get());
         saveDictToFile();
@@ -64,8 +70,9 @@ class $modify(FAPlayLayer, PlayLayer) {
     }
 
     void fullSaveLLM() {
-        if(!s_saveLLM) return;
+        if(!s_saveLLM || m_fields->m_isSavingLLM) return;
 
+        m_fields->m_isSavingLLM = true;
         auto now = asp::Instant::now();
         auto LLM = LocalLevelManager::get();
         std::shared_ptr<DS_Dictionary> dict = std::make_shared<DS_Dictionary>();
@@ -77,8 +84,11 @@ class $modify(FAPlayLayer, PlayLayer) {
             #else
                 dict->saveRootSubDictToCompressedFile(filename.c_str());
             #endif
-        }), [now] {
+        }), [now, selfPtr = WeakRef(this)] {
             log::debug("LLM saving took {}", now.elapsed());
+            if(auto self = selfPtr.lock()) {
+                modify_cast<FAPlayLayer*>(self.data())->m_fields->m_isSavingLLM = false;
+            }
         });
 
     }
@@ -111,7 +121,7 @@ class $modify(FAPlayLayer, PlayLayer) {
     void resetLevel() {
         if(!m_fields->m_isLoaded) return PlayLayer::resetLevel();
 
-        if(m_level->m_newNormalPercent2 != m_fields->m_lastPercentage) {
+        if(m_level->m_newNormalPercent2 != m_fields->m_lastPercentage && !m_fields->m_isSaving) {
             auto start = asp::Instant::now();
             auto dict = m_fields->m_dict.get();
 
@@ -176,10 +186,7 @@ class $modify(FAPlayLayer, PlayLayer) {
 static bool g_shouldSkipQuickSave = false;
 class $modify(GManager) {
     void save() {
-        if(g_shouldSkipQuickSave) {
-            g_shouldSkipQuickSave = false;
-            return;
-        }
+        if(g_shouldSkipQuickSave) return;
         
         GManager::save();
     }
