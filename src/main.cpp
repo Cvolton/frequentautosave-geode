@@ -1,5 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
+#include <Geode/modify/GManager.hpp>
+#include <Geode/modify/EndLevelLayer.hpp>
 
 using namespace geode::prelude;
 
@@ -40,12 +42,15 @@ class $modify(FAPlayLayer, PlayLayer) {
         std::shared_ptr<DS_Dictionary> m_dict = std::make_shared<DS_Dictionary>();
         std::atomic_bool m_isSaving = false;
         bool m_isLoaded = false;
+        bool m_didFinalSave = false;
     };
 
     /**
      * Utils
      */
     void saveDictToFile() {
+        if(m_fields->m_isSaving) return;
+
         auto now = asp::Instant::now();
         auto filename = GameManager::get()->m_fileName;
 
@@ -57,8 +62,16 @@ class $modify(FAPlayLayer, PlayLayer) {
             if(auto self = selfPtr.lock()) {
                 modify_cast<FAPlayLayer*>(self.data())->m_fields->m_isSaving = false;
             }
-            log::debug("Saving took {} ms", now.elapsed());
+            log::debug("Saving took {}", now.elapsed());
         });
+    }
+
+    void fullDictSave(float dt) {
+        if(m_fields->m_didFinalSave) return;
+
+        m_fields->m_didFinalSave = true;
+        GameManager::get()->encodeDataTo(m_fields->m_dict.get());
+        saveDictToFile();
     }
 
     /**
@@ -68,7 +81,7 @@ class $modify(FAPlayLayer, PlayLayer) {
     void levelComplete() {   
         PlayLayer::levelComplete();
 
-        GameManager::get()->doQuickSave();
+        this->scheduleOnce(schedule_selector(FAPlayLayer::fullDictSave), 10.f);
     }
 
     void setupHasCompleted() {
@@ -139,7 +152,7 @@ class $modify(FAPlayLayer, PlayLayer) {
                     break;
             }
 
-            log::debug("Initializing save took {} ms", start.elapsed());
+            log::debug("Initializing save took {}", start.elapsed());
             saveDictToFile();
 
         }
@@ -148,3 +161,29 @@ class $modify(FAPlayLayer, PlayLayer) {
     }
 };
 
+// to avoid an annoying lag spike from double saving, we skip the quick save
+// that happens in EndLevelLayer::onMenu, we save in levelComplete anyway,
+// so no progress is lost
+static bool g_shouldSkipQuickSave = false;
+class $modify(GManager) {
+    void save() {
+        if(g_shouldSkipQuickSave) {
+            g_shouldSkipQuickSave = false;
+            return;
+        }
+        
+        GManager::save();
+    }
+};
+
+class $modify(EndLevelLayer) {
+    void onMenu(CCObject* sender) {
+        g_shouldSkipQuickSave = true;
+        EndLevelLayer::onMenu(sender);
+        auto pl = modify_cast<FAPlayLayer*>(PlayLayer::get());
+        if(pl) {
+            pl->fullDictSave(0);
+        }
+        g_shouldSkipQuickSave = false;
+    }
+};
