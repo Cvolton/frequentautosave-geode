@@ -142,14 +142,15 @@ class $modify(FAPlayLayer, PlayLayer) {
                 }
                 case GJLevelType::Saved: {
                     bool isGLM03 = GLM->m_onlineLevels->objectForKey(fmt::to_string(m_level->m_levelID.value()).c_str()) == m_level;
-                    bool isGLM10 = GLM->m_dailyLevels->objectForKey(fmt::to_string(m_level->m_levelID.value()).c_str()) == m_level;
+                    bool isGLM10 = GLM->m_dailyLevels->objectForKey(fmt::to_string(m_level->m_dailyID.value()).c_str()) == m_level;
                     bool isGLM16 = GLM->m_gauntletLevels->objectForKey(fmt::to_string(m_level->m_levelID.value()).c_str()) == m_level;
                     const char* dictKey = isGLM03 ? "GLM_03" : isGLM10 ? "GLM_10" : isGLM16 ? "GLM_16" : nullptr;
+                    auto idKey = isGLM10 ? fmt::to_string(m_level->m_dailyID.value()) : fmt::to_string(m_level->m_levelID.value());
                     
                     if(!dictKey) break;
 
                     if(dict->stepIntoSubDictWithKey(dictKey)) {
-                        dict->setObjectForKey(fmt::to_string(m_level->m_levelID.value()).c_str(), m_level);
+                        dict->setObjectForKey(idKey.c_str(), m_level);
                         dict->stepOutOfSubDict();
                     }
 
