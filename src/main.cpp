@@ -118,8 +118,10 @@ class $modify(FAPlayLayer, PlayLayer) {
         return true;
     }
 
-    void resetLevel() {
-        if(!m_fields->m_isLoaded) return PlayLayer::resetLevel();
+    void destroyPlayer(PlayerObject* player, GameObject* object) {
+        PlayLayer::destroyPlayer(player, object);
+
+        if(!m_fields->m_isLoaded || object == m_anticheatSpike) return;
 
         if(m_level->m_newNormalPercent2 != m_fields->m_lastPercentage && !m_fields->m_isSaving) {
             auto start = asp::Instant::now();
@@ -176,8 +178,6 @@ class $modify(FAPlayLayer, PlayLayer) {
 
             m_fields->m_lastPercentage = m_level->m_newNormalPercent2;
         }
-
-        PlayLayer::resetLevel();
     }
 };
 
@@ -202,5 +202,13 @@ class $modify(EndLevelLayer) {
             pl->fullDictSave(0);
         }
         g_shouldSkipQuickSave = false;
+    }
+
+    void onReplay(CCObject* sender) {
+        auto pl = modify_cast<FAPlayLayer*>(PlayLayer::get());
+        if(pl) {
+            pl->fullDictSave(0);
+        }
+        EndLevelLayer::onReplay(sender);
     }
 };
