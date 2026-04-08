@@ -140,6 +140,12 @@ class $modify(FAPlayLayer, PlayLayer) {
                 }
                 case GJLevelType::Main: {
                     dict->setDictForKey("GLM_01", GLM->m_mainLevels);
+                    // for "So Close" achievement
+                    if(m_level->m_newNormalPercent2 >= 95) {
+                        // with how GD saves reported achievements and unlocked icons
+                        // in a bunch of spots, it's better to just trigger a full save here
+                        GameManager::get()->encodeDataTo(dict);
+                    }
                     break;
                 }
                 case GJLevelType::Saved: {
