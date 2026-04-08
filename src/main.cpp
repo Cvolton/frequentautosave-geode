@@ -2,6 +2,7 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/GManager.hpp>
 #include <Geode/modify/EndLevelLayer.hpp>
+#include <Geode/modify/GameManager.hpp>
 
 using namespace geode::prelude;
 
@@ -24,6 +25,7 @@ class $modify(FAPlayLayer, PlayLayer) {
         std::atomic_bool m_isSavingLLM = false;
         bool m_isLoaded = false;
         bool m_didFinalSave = false;
+        bool m_needsFullSave = false;
     };
 
     /**
@@ -54,6 +56,7 @@ class $modify(FAPlayLayer, PlayLayer) {
 
     void fullDictSave(float dt) {
         if(m_fields->m_didFinalSave) return;
+        m_fields->m_needsFullSave = false;
 
         if (m_fields->m_isSaving) {
             this->scheduleOnce(schedule_selector(FAPlayLayer::fullDictSave), 0.5f);
@@ -123,6 +126,13 @@ class $modify(FAPlayLayer, PlayLayer) {
 
         if(!m_fields->m_isLoaded || object == m_anticheatSpike) return;
 
+        // triggers full save after an achievement unlock
+        if(m_fields->m_needsFullSave) {
+            fullDictSave(0);
+            return;
+        }
+
+        // otherwise we only save progress relevant to the level so we don't cause lag
         if(m_level->m_newNormalPercent2 != m_fields->m_lastPercentage && !m_fields->m_isSaving) {
             auto start = asp::Instant::now();
             auto dict = m_fields->m_dict.get();
@@ -140,12 +150,6 @@ class $modify(FAPlayLayer, PlayLayer) {
                 }
                 case GJLevelType::Main: {
                     dict->setDictForKey("GLM_01", GLM->m_mainLevels);
-                    // for "So Close" achievement
-                    if(m_level->m_newNormalPercent2 >= 95) {
-                        // with how GD saves reported achievements and unlocked icons
-                        // in a bunch of spots, it's better to just trigger a full save here
-                        GameManager::get()->encodeDataTo(dict);
-                    }
                     break;
                 }
                 case GJLevelType::Saved: {
@@ -216,5 +220,15 @@ class $modify(EndLevelLayer) {
             pl->fullDictSave(0);
         }
         EndLevelLayer::onReplay(sender);
+    }
+};
+
+class $modify(GameManager) {
+    void reportAchievementWithID(char const* key, int percent, bool dontNotify) {
+        GameManager::reportAchievementWithID(key, percent, dontNotify);
+
+        if(auto pl = modify_cast<FAPlayLayer*>(PlayLayer::get())) {
+            pl->m_fields->m_needsFullSave = true;
+        }
     }
 };
