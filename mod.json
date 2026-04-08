@@ -7,8 +7,8 @@
 		"ios": "2.2081"
 	},
 	"id": "cvolton.frequent_autosave",
-	"name": "Frequent AutoSave",
-	"version": "v1.0.0",
+	"name": "Frequent Autosave",
+	"version": "v1.0.0-beta.1",
 	"developer": "Cvolton",
 	"description": "It makes your game save more frequently",
 	"settings": {
