@@ -73,11 +73,10 @@ class $modify(FAPlayLayer, PlayLayer) {
             return;
         }
 
-        auto dict = m_fields->m_dict.get();
-
         m_fields->m_didFinalSave = true;
-        dict->removeAllKeys();
-        GameManager::get()->encodeDataTo(dict);
+        m_fields->m_dict = std::make_shared<DS_Dictionary>();
+        
+        GameManager::get()->encodeDataTo(m_fields->m_dict.get());
         saveDictToFile();
 
         if(m_level->m_levelType == GJLevelType::Editor) {
