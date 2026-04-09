@@ -64,13 +64,18 @@ class $modify(FAPlayLayer, PlayLayer) {
         if(m_fields->m_didFinalSave) return;
         m_fields->m_needsFullSave = false;
 
+        log::debug("Triggering full save");
+
         if (m_fields->m_isSaving) {
             this->scheduleOnce(schedule_selector(FAPlayLayer::fullDictSave), 0.5f);
             return;
         }
 
+        auto dict = m_fields->m_dict.get();
+
         m_fields->m_didFinalSave = true;
-        GameManager::get()->encodeDataTo(m_fields->m_dict.get());
+        dict->removeAllKeys();
+        GameManager::get()->encodeDataTo(dict);
         saveDictToFile();
 
         if(m_level->m_levelType == GJLevelType::Editor) {
@@ -138,6 +143,8 @@ class $modify(FAPlayLayer, PlayLayer) {
             auto GLM = GameLevelManager::get();
             auto GSM = GameStatsManager::get();
 
+            dict->removeKey("GS_value");
+            dict->removeKey("GS_20");
             dict->setDictForKey("GS_value", GSM->m_playerStats);
             dict->setIntegerForKey("GS_20", GSM->m_bonusKey);
 
@@ -147,6 +154,7 @@ class $modify(FAPlayLayer, PlayLayer) {
                     break;
                 }
                 case GJLevelType::Main: {
+                    dict->removeKey("GLM_01");
                     dict->setDictForKey("GLM_01", GLM->m_mainLevels);
                     break;
                 }
@@ -160,17 +168,24 @@ class $modify(FAPlayLayer, PlayLayer) {
                     if(!dictKey) break;
 
                     if(dict->stepIntoSubDictWithKey(dictKey)) {
+                        dict->removeKey(idKey.c_str());
                         dict->setObjectForKey(idKey.c_str(), m_level);
                         dict->stepOutOfSubDict();
                     }
 
                     if(isGLM03) {
+                        dict->removeKey("GS_7");
                         dict->setDictForKey("GS_7", GSM->m_onlineCurrencyScores);
                     } else if(isGLM10) {
+                        dict->removeKey("GS_14");
+                        dict->removeKey("GS_16");
+                        dict->removeKey("GS_24");
                         dict->setDictForKey("GS_14", GSM->m_challengeDiamonds);
                         dict->setDictForKey("GS_16", GSM->m_timelyCurrencyScores);
                         dict->setDictForKey("GS_24", GSM->m_timelyDiamondScores);
                     } else if(isGLM16) {
+                        dict->removeKey("GS_18");
+                        dict->removeKey("GS_23");
                         dict->setDictForKey("GS_18", GSM->m_gauntletDiamondScores);
                         dict->setDictForKey("GS_23", GSM->m_gauntletCurrencyScores);
                     }
