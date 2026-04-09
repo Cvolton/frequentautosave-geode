@@ -3,6 +3,7 @@
 #include <Geode/modify/GManager.hpp>
 #include <Geode/modify/EndLevelLayer.hpp>
 #include <Geode/modify/GameManager.hpp>
+#include <Geode/modify/ChallengesPage.hpp>
 
 using namespace geode::prelude;
 
@@ -148,6 +149,11 @@ class $modify(FAPlayLayer, PlayLayer) {
             dict->setDictForKey("GS_value", GSM->m_playerStats);
             dict->setIntegerForKey("GS_20", GSM->m_bonusKey);
 
+            dict->removeKey("GS_12");
+            dict->removeKey("GS_15");
+            dict->setDictForKey("GS_12", GSM->m_activeChallenges);
+            dict->setDictForKey("GS_15", GSM->m_upcomingChallenges);
+
             switch(m_level->m_levelType) {
                 case GJLevelType::Editor: {
                     fullSaveLLM();
@@ -239,6 +245,16 @@ class $modify(EndLevelLayer) {
 class $modify(GameManager) {
     void completedAchievement(gd::string key) {
         GameManager::completedAchievement(key);
+
+        if(auto pl = modify_cast<FAPlayLayer*>(PlayLayer::get())) {
+            pl->m_fields->m_needsFullSave = true;
+        }
+    }
+};
+
+class $modify(ChallengesPage) {
+    void claimItem(ChallengeNode* node, GJChallengeItem* item, CCPoint position) {
+        ChallengesPage::claimItem(node, item, position);
 
         if(auto pl = modify_cast<FAPlayLayer*>(PlayLayer::get())) {
             pl->m_fields->m_needsFullSave = true;
