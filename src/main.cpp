@@ -4,6 +4,7 @@
 #include <Geode/modify/EndLevelLayer.hpp>
 #include <Geode/modify/GameManager.hpp>
 #include <Geode/modify/ChallengesPage.hpp>
+#include <Geode/modify/RewardUnlockLayer.hpp>
 
 using namespace geode::prelude;
 
@@ -255,6 +256,16 @@ class $modify(GameManager) {
 class $modify(ChallengesPage) {
     void claimItem(ChallengeNode* node, GJChallengeItem* item, CCPoint position) {
         ChallengesPage::claimItem(node, item, position);
+
+        if(auto pl = modify_cast<FAPlayLayer*>(PlayLayer::get())) {
+            pl->m_fields->m_needsFullSave = true;
+        }
+    }
+};
+
+class $modify(RewardUnlockLayer) {
+    void onClose(CCObject* sender) {
+        RewardUnlockLayer::onClose(sender);
 
         if(auto pl = modify_cast<FAPlayLayer*>(PlayLayer::get())) {
             pl->m_fields->m_needsFullSave = true;
