@@ -11,6 +11,9 @@
 	"version": "v1.0.0-beta.1",
 	"developer": "Cvolton",
 	"description": "It makes your game save more frequently",
+	"links": {
+		"source": "https://github.com/Cvolton/frequentautosave-geode"
+	},
 	"settings": {
 		"save-llm": {
             "name": "Autosave Editor Levels",
