@@ -237,8 +237,8 @@ class $modify(EndLevelLayer) {
 };
 
 class $modify(GameManager) {
-    void reportAchievementWithID(char const* key, int percent, bool dontNotify) {
-        GameManager::reportAchievementWithID(key, percent, dontNotify);
+    void completedAchievement(gd::string key) {
+        GameManager::completedAchievement(key);
 
         if(auto pl = modify_cast<FAPlayLayer*>(PlayLayer::get())) {
             pl->m_fields->m_needsFullSave = true;
