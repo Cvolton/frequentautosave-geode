@@ -17,6 +17,22 @@ using namespace geode::prelude;
 
 STATIC_BOOL_SETTING(saveLLM, save-llm);
 
+void saveDictToFile(std::shared_ptr<DS_Dictionary> dict, std::string filename, geode::Function<void()> callback) {
+    auto now = asp::Instant::now();
+
+    async::spawn(arc::spawnBlocking<void>([dict, filename] {
+        #if defined(GEODE_IS_MACOS) || defined(GEODE_IS_IOS)
+            auto str = dict->saveRootSubDictToString();
+            PlatformToolbox::saveAndEncryptStringToFile(str, filename.c_str(), "/data/data/com.robtopx.geometryjump/");
+        #else
+            dict->saveRootSubDictToCompressedFile(filename.c_str());
+        #endif
+    }), [now, callback = std::move(callback)] mutable {
+        callback();
+        log::debug("Saving took {}", now.elapsed());
+    });
+}
+
 class $modify(FAPlayLayer, PlayLayer) {
     struct Fields {
         std::shared_ptr<DS_Dictionary> m_dict = std::make_shared<DS_Dictionary>();
@@ -34,23 +50,13 @@ class $modify(FAPlayLayer, PlayLayer) {
     void saveDictToFile() {
         if(m_fields->m_isSaving) return;
 
-        auto now = asp::Instant::now();
+        m_fields->m_isSaving = true;
         auto filename = GameManager::get()->m_fileName;
 
-        m_fields->m_isSaving = true;
-
-        async::spawn(arc::spawnBlocking<void>([dict = m_fields->m_dict, filename] {
-            #if defined(GEODE_IS_MACOS) || defined(GEODE_IS_IOS)
-                auto str = dict->saveRootSubDictToString();
-                PlatformToolbox::saveAndEncryptStringToFile(str, filename.c_str(), "/data/data/com.robtopx.geometryjump/");
-            #else
-                dict->saveRootSubDictToCompressedFile(filename.c_str());
-            #endif
-        }), [selfPtr = WeakRef(this), now] {
+        ::saveDictToFile(m_fields->m_dict, filename, [selfPtr = WeakRef(this)] {
             if(auto self = selfPtr.lock()) {
                 modify_cast<FAPlayLayer*>(self.data())->m_fields->m_isSaving = false;
             }
-            log::debug("Saving took {}", now.elapsed());
         });
     }
 
@@ -77,23 +83,15 @@ class $modify(FAPlayLayer, PlayLayer) {
 
         m_fields->m_isSavingLLM = true;
         auto now = asp::Instant::now();
+
         auto LLM = LocalLevelManager::get();
         std::shared_ptr<DS_Dictionary> dict = std::make_shared<DS_Dictionary>();
         LLM->encodeDataTo(dict.get());
-        async::spawn(arc::spawnBlocking<void>([dict, filename = LLM->m_fileName] {
-            #if defined(GEODE_IS_MACOS) || defined(GEODE_IS_IOS)
-                auto str = dict->saveRootSubDictToString();
-                PlatformToolbox::saveAndEncryptStringToFile(str, filename.c_str(), "/data/data/com.robtopx.geometryjump/");
-            #else
-                dict->saveRootSubDictToCompressedFile(filename.c_str());
-            #endif
-        }), [now, selfPtr = WeakRef(this)] {
-            log::debug("LLM saving took {}", now.elapsed());
+        ::saveDictToFile(dict, LLM->m_fileName, [selfPtr = WeakRef(this)] {
             if(auto self = selfPtr.lock()) {
                 modify_cast<FAPlayLayer*>(self.data())->m_fields->m_isSavingLLM = false;
             }
         });
-
     }
 
     /**
