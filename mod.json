@@ -14,6 +14,7 @@
 	"links": {
 		"source": "https://github.com/Cvolton/frequentautosave-geode"
 	},
+	"tags": ["utility", "performance"],
 	"settings": {
 		"save-llm": {
             "name": "Autosave Editor Levels",
